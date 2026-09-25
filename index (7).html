@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Налоговый анализ — УСН vs ОСНО</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0A0C12;--surface:#11141D;--surface2:#171B27;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#E8EDF5;--muted:#6B7A99;--muted2:#9BA8C0;
+  --blue:#4F8EF7;--blue-dim:rgba(79,142,247,0.13);
+  --orange:#F97316;--orange-dim:rgba(249,115,22,0.13);
+  --green:#34D399;--red:#F87171;--amber:#FBBF24;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);
+  padding:28px 24px 48px;
+  background-image:radial-gradient(ellipse 800px 400px at 20% -10%,rgba(79,142,247,0.06) 0%,transparent 60%),
+  radial-gradient(ellipse 600px 400px at 80% 110%,rgba(249,115,22,0.05) 0%,transparent 60%);}
+.wrap{max-width:1140px;margin:0 auto;}
+
+/* HEADER */
+.header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;
+  padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--border);}
+.h-eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.h-title{font-family:'Instrument Serif',serif;font-size:28px;line-height:1.1;}
+.h-title em{font-style:italic;color:var(--blue);}
+.h-meta{font-size:12px;color:var(--muted);text-align:right;}
+.h-meta b{font-family:'DM Mono',monospace;font-weight:500;color:var(--text);}
+
+/* FILTERS */
+.filters{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+.filter-btn{font-family:'DM Mono',monospace;font-size:12px;padding:6px 14px;border-radius:20px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;
+  transition:all .18s;white-space:nowrap;}
+.filter-btn:hover{border-color:rgba(255,255,255,0.22);color:var(--text);}
+.filter-btn.fu{background:var(--blue-dim);border-color:rgba(79,142,247,0.45);color:var(--blue);}
+.filter-btn.fo{background:var(--orange-dim);border-color:rgba(249,115,22,0.45);color:var(--orange);}
+.filter-btn.fb{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.2);color:var(--text);}
+.filter-sep{color:var(--border2);font-size:16px;}
+
+/* SUMMARY CARDS */
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;
+  transition:opacity .22s,transform .22s;position:relative;overflow:hidden;}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;}
+.sc-ut::before{background:var(--blue);}
+.sc-up::before{background:var(--green);}
+.sc-ot::before{background:var(--orange);}
+.sc-op::before{background:var(--red);}
+.sum-card.dim{opacity:.3;transform:scale(.97);}
+.s-lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+.s-val{font-family:'DM Mono',monospace;font-size:21px;font-weight:500;line-height:1;margin-bottom:3px;}
+.s-sub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.sc-ut .s-val{color:var(--blue);}.sc-up .s-val{color:var(--green);}
+.sc-ot .s-val{color:var(--orange);}.sc-op .s-val{color:var(--red);}
+
+/* KPI ROW */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.kpi-card{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;}
+.k-lbl{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.k-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.k-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);opacity:.8;}
+
+/* MAIN GRID */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;
+  display:flex;flex-direction:column;}
+.c-title{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;
+  display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.c-title::before{content:'';width:2px;height:10px;border-radius:2px;background:currentColor;flex-shrink:0;}
+
+/* SLIDERS */
+.hint-bar{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:6px;flex-shrink:0;
+  background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.18);margin-bottom:13px;}
+.exp-row{margin-bottom:13px;}
+.exp-row:last-of-type{margin-bottom:0;}
+.exp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.exp-name{font-size:12px;color:var(--muted2);}
+.exp-nums{display:flex;align-items:center;gap:7px;}
+.pct-inp{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--text);
+  background:var(--surface2);border:1px solid var(--border2);border-radius:5px;
+  padding:2px 6px;width:48px;text-align:center;outline:none;transition:border-color .15s;}
+.pct-inp:focus{border-color:rgba(255,255,255,0.28);}
+.exp-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);min-width:60px;text-align:right;}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--text);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 0 1px rgba(255,255,255,0.15);transition:transform .12s;}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25);}
+.bar-track{background:rgba(255,255,255,0.06);border-radius:2px;height:4px;overflow:hidden;margin-top:4px;}
+.bar-fill{height:100%;border-radius:2px;transition:width .32s cubic-bezier(.16,1,.3,1);}
+.bf-b{background:var(--blue);}.bf-t{background:#2DD4BF;}.bf-a{background:var(--amber);}.bf-w{background:rgba(255,255,255,0.22);}
+.exp-total{display:flex;justify-content:space-between;align-items:center;padding:8px 0 0;margin-top:4px;border-top:1px solid var(--border);}
+.et-lbl{font-size:12px;font-weight:500;color:var(--text);}
+.et-right{display:flex;gap:8px;align-items:center;}
+.et-pct{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);font-weight:500;}
+.et-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);}
+.base-box{margin-top:10px;padding:8px 12px;border-radius:7px;background:rgba(251,191,36,0.08);
+  border:1px solid rgba(251,191,36,0.2);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.base-lbl{font-size:11px;color:var(--amber);}
+.base-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--amber);}
+
+/* DRAG HINT */
+.drag-hint{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  font-family:'DM Mono',monospace;font-size:9px;color:var(--blue);
+  background:rgba(79,142,247,0.13);border:1px solid rgba(79,142,247,0.28);
+  border-radius:20px;padding:1px 8px;pointer-events:none;
+  opacity:.75;transition:opacity .25s;white-space:nowrap;}
+.exp-row:not(.touched) .drag-hint{opacity:.75;}
+.exp-row:not(.touched):hover .drag-hint{opacity:1;}
+.exp-row.touched .drag-hint{opacity:0;}
+
+/* TAX SCENARIOS */
+.ts{border-radius:9px;padding:13px;border:1px solid;transition:opacity .22s;flex-shrink:0;}
+.ts.dim{opacity:.3;}
+.ts-u{background:var(--blue-dim);border-color:rgba(79,142,247,0.25);}
+.ts-o{background:var(--orange-dim);border-color:rgba(249,115,22,0.25);margin-top:10px;}
+.ts-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:7px;}
+.ts-name{font-size:11px;font-weight:500;line-height:1.3;}
+.ts-name.u{color:var(--blue);}.ts-name.o{color:var(--orange);}
+.ts-ttl{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;white-space:nowrap;}
+.ts-ttl.u{color:var(--blue);}.ts-ttl.o{color:var(--orange);}
+.tl{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);gap:7px;}
+.tl:last-child{border-bottom:none;}
+.tl-l{color:var(--muted2);flex-shrink:0;}
+.tl-v{font-family:'DM Mono',monospace;font-weight:500;text-align:right;font-size:11px;}
+.tl-sec{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+.pill{font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:20px;
+  background:rgba(255,255,255,0.07);color:var(--muted2);margin-left:3px;}
+
+/* STACKED */
+.sl{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.sl-name{font-size:11px;color:var(--muted2);}
+.sl-info{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.sbar{height:30px;border-radius:5px;overflow:hidden;display:flex;transition:opacity .22s;}
+.sbar.dim{opacity:.3;}
+.seg{display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;font-weight:500;
+  transition:width .35s cubic-bezier(.16,1,.3,1);overflow:hidden;white-space:nowrap;}
+.s-ex{background:rgba(255,255,255,0.09);color:var(--muted);padding-left:8px;justify-content:flex-start;}
+.s-tu{background:rgba(79,142,247,0.3);color:var(--blue);}
+.s-pu{background:rgba(79,142,247,0.6);color:#c7ddfd;padding-right:8px;justify-content:flex-end;}
+.s-to{background:rgba(249,115,22,0.35);color:var(--orange);}
+.s-po{background:rgba(249,115,22,0.55);color:#fddcc7;padding-right:8px;justify-content:flex-end;}
+.legend{display:flex;flex-wrap:wrap;gap:11px;margin-top:11px;}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);}
+.ld{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* PROFIT PAIR */
+.pp{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pc{border-radius:9px;padding:13px 15px;border:1px solid;transition:opacity .22s;position:relative;overflow:hidden;}
+.pc::before{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.pc.dim{opacity:.3;}
+.pc-u{background:rgba(79,142,247,0.07);border-color:rgba(79,142,247,0.22);}
+.pc-u::before{background:var(--blue);}
+.pc-o{background:rgba(249,115,22,0.07);border-color:rgba(249,115,22,0.22);}
+.pc-o::before{background:var(--orange);}
+.pc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.pc-u .pc-lbl{color:var(--blue);}.pc-o .pc-lbl{color:var(--orange);}
+.pc-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;line-height:1;margin-bottom:2px;}
+.pc-u .pc-val{color:var(--blue);}.pc-o .pc-val{color:var(--orange);}
+.pc-sub{font-size:11px;color:var(--muted);}
+.pc-form{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:5px;line-height:1.5;}
+
+/* DELTA */
+.delta{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-top:10px;
+  position:relative;overflow:hidden;}
+.delta::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 400px 200px at 85% 50%,rgba(239,68,68,0.06),transparent);pointer-events:none;}
+.d-left{display:flex;flex-direction:column;gap:4px;}
+.d-ey{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.d-hl{font-family:'Instrument Serif',serif;font-size:17px;}
+.d-desc{font-size:12px;color:var(--muted2);line-height:1.5;max-width:400px;}
+.d-stats{display:flex;gap:22px;flex-wrap:wrap;}
+.d-stat{text-align:right;}
+.d-slbl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px;}
+.d-sval{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--red);line-height:1;}
+.d-ssub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* FOOTNOTE */
+.footnote{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;
+  margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.fn{font-size:10px;color:var(--muted);line-height:1.65;max-width:320px;}
+.fn span{color:var(--muted2);}
+
+.dl-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:'DM Mono',monospace;font-size:11px;padding:6px 14px;
+  border-radius:8px;border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.06);color:var(--muted2);
+  cursor:pointer;text-decoration:none;transition:all .18s;white-space:nowrap;
+}
+.dl-btn:hover{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.28);color:var(--text);}
+.dl-btn svg{flex-shrink:0;transition:transform .18s;}
+.dl-btn:hover svg{transform:translateY(2px);}
+.dl-btn.pdf{border-color:rgba(248,113,113,0.35);color:#FDA4AF;}
+.dl-btn.pdf:hover{background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.55);color:#FCA5A5;}
+
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  :root{
+    --bg:#fff;--surface:#F8FAFC;--surface2:#F1F5F9;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+    --text:#1A202C;--muted:#64748B;--muted2:#475569;
+    --blue:#1D4ED8;--blue-dim:rgba(29,78,216,0.08);
+    --orange:#C2410C;--orange-dim:rgba(194,65,12,0.08);
+    --green:#15803D;--red:#B91C1C;--amber:#B45309;
+  }
+  html,body{background:#fff!important;}
+  body{padding:12mm 14mm!important;}
+  .wrap{max-width:100%!important;}
+  .no-print,.dl-btn,.filters{display:none!important;}
+  .fade-up{opacity:1!important;transform:none!important;animation:none!important;}
+  .header{padding-bottom:8px!important;margin-bottom:8px!important;}
+  .h-title{font-size:20px!important;}
+  .sum-grid,.kpi-grid{gap:6px!important;margin-bottom:8px!important;}
+  .sum-card,.kpi-card{padding:8px 10px!important;border-radius:6px!important;}
+  .s-val{font-size:16px!important;}.k-val{font-size:14px!important;}
+  .main-grid{gap:8px!important;}
+  .card{padding:12px 14px!important;border-radius:8px!important;page-break-inside:avoid;}
+  .ts{padding:10px!important;}.ts-ttl{font-size:15px!important;}
+  .delta{padding:10px 14px!important;margin-top:8px!important;}
+  .d-sval{font-size:18px!important;}
+  .pc-val{font-size:18px!important;}
+  .footnote{margin-top:12px!important;padding-top:10px!important;}
+  .h-eyebrow,.h-title em,.s-val,.k-val,.tl-v,.ts-ttl,.pc-val,.d-sval,.base-val,.et-pct{color-adjust:exact;}
+  @page{margin:10mm;size:A4 landscape;}
+}
+.fade-up{opacity:0;transform:translateY(10px);animation:fadeUp .5s cubic-bezier(.16,1,.3,1) forwards;}
+@keyframes fadeUp{to{opacity:1;transform:none;}}
+.d1{animation-delay:.04s}.d2{animation-delay:.10s}.d3{animation-delay:.16s}
+.d4{animation-delay:.22s}.d5{animation-delay:.28s}.d6{animation-delay:.35s}
+
+@media(max-width:760px){
+  .sum-grid,.kpi-grid{grid-template-columns:1fr 1fr;}
+  .main-grid{grid-template-columns:1fr;}
+  .d-stats{justify-content:flex-start;}.d-stat{text-align:left;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="header fade-up d1">
+  <div>
+    <div class="h-eyebrow">Маркетплейсы WB &amp; Ozon · Калмыкия</div>
+    <div class="h-title">Налоговый анализ: УСН <em>vs</em> ОСНО</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+    <div class="h-meta" style="display:flex;flex-direction:column;gap:2px;text-align:right;">
+      <div>Заказы: <b>145 млн/мес</b> · Выкуп: <b>42%</b></div>
+      <div>Выручка: <b>60,9 млн/мес</b></div>
+    </div>
+    <div style="display:flex;gap:7px;align-items:center;">
+    <a class="dl-btn" id="dl-btn" download="налоговый-дашборд.html" href="#">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      HTML
+    </a>
+    <button class="dl-btn pdf" onclick="downloadPDF()">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="1" width="9" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M5 8h4M5 10.5h2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      PDF
+    </button>
+    </div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters fade-up d2">
+  <span style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-right:2px;">Показать:</span>
+  <button class="filter-btn fu" id="btn-u" onclick="setFilter('usn')">УСН Д–Р 5%</button>
+  <button class="filter-btn fo" id="btn-o" onclick="setFilter('osno')">ОСНО НДС 22% + Прибыль 25%</button>
+  <span class="filter-sep">|</span>
+  <button class="filter-btn fb" id="btn-b" onclick="setFilter('both')">Сравнить оба</button>
+</div>
+
+<!-- SUMMARY CARDS -->
+<div class="sum-grid fade-up d3">
+  <div class="sum-card sc-ut" id="sc-ut">
+    <div class="s-lbl">Налог · УСН</div>
+    <div class="s-val" id="sv-ut">—</div>
+    <div class="s-sub" id="ss-ut">—</div>
+  </div>
+  <div class="sum-card sc-up" id="sc-up">
+    <div class="s-lbl">Чистая прибыль · УСН</div>
+    <div class="s-val" id="sv-up">—</div>
+    <div class="s-sub" id="ss-up">—</div>
+  </div>
+  <div class="sum-card sc-ot" id="sc-ot">
+    <div class="s-lbl">Налог · ОСНО</div>
+    <div class="s-val" id="sv-ot">—</div>
+    <div class="s-sub" id="ss-ot">—</div>
+  </div>
+  <div class="sum-card sc-op" id="sc-op">
+    <div class="s-lbl">Чистая прибыль · ОСНО</div>
+    <div class="s-val" id="sv-op">—</div>
+    <div class="s-sub" id="ss-op">—</div>
+  </div>
+</div>
+
+<!-- KPI ROW -->
+<div class="kpi-grid fade-up d4">
+  <div class="kpi-card">
+    <div class="k-lbl">Доходы (выручка)</div>
+    <div class="k-val">60,9 <span style="font-size:11px;color:var(--muted)">млн</span></div>
+    <div class="k-sub">145 млн × 42% выкупа</div>
+  </div>
+  <div class="kpi-card">
+    <div class="k-lbl">Итого расходы</div>
+    <div class="k-val" id="kv-exp">—</div>
+    <div class="k-sub" id="ks-exp">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="k-lbl">База (Д – Р)</div>
+    <div class="k-val" id="kv-base">—</div>
+    <div class="k-sub" id="ks-base">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="k-lbl">Рентабельность до налогов</div>
+    <div class="k-val" id="kv-marg">—</div>
+    <div class="k-sub">до вычета налогов</div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid fade-up d5">
+
+  <!-- Строка 1, левая: СЛАЙДЕРЫ -->
+  <div class="card">
+    <div class="c-title" style="color:var(--muted)">Структура расходов</div>
+    <div class="hint-bar">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:.8"><circle cx="8" cy="8" r="7" stroke="#4F8EF7" stroke-width="1.5"/><rect x="7.25" y="6.5" width="1.5" height="5.5" rx=".75" fill="#4F8EF7"/><rect x="7.25" y="4" width="1.5" height="1.5" rx=".75" fill="#4F8EF7"/></svg>
+      <span style="font-size:10px;color:#7aaaf7;font-family:'DM Mono',monospace;">Тяните бегунки или вводите значения — всё пересчитается</span>
+    </div>
+
+    <div class="exp-row">
+      <div class="exp-head">
+        <span class="exp-name">Прямые расходы</span>
+        <div class="exp-nums">
+          <input type="number" class="pct-inp" id="ni-d" value="65" min="0" max="95" step="1" oninput="fromNum('d',this.value)">
+          <span style="font-size:11px;color:var(--muted)">%</span>
+          <span class="exp-val" id="ev-d">—</span>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <input type="range" id="sl-d" min="0" max="95" step="1" value="65" oninput="fromSlider('d',this.value)">
+        <span class="drag-hint">← тяните</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bf-b" id="bf-d" style="width:0"></div></div>
+    </div>
+
+    <div class="exp-row">
+      <div class="exp-head">
+        <span class="exp-name">Себестоимость</span>
+        <div class="exp-nums">
+          <input type="number" class="pct-inp" id="ni-c" value="13" min="0" max="50" step="1" oninput="fromNum('c',this.value)">
+          <span style="font-size:11px;color:var(--muted)">%</span>
+          <span class="exp-val" id="ev-c">—</span>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <input type="range" id="sl-c" min="0" max="50" step="1" value="13" oninput="fromSlider('c',this.value)">
+        <span class="drag-hint">← тяните</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bf-t" id="bf-c" style="width:0"></div></div>
+    </div>
+
+    <div class="exp-row">
+      <div class="exp-head">
+        <span class="exp-name">Косвенные (в т.ч. % по кредитам)</span>
+        <div class="exp-nums">
+          <input type="number" class="pct-inp" id="ni-i" value="5" min="0" max="30" step="1" oninput="fromNum('i',this.value)">
+          <span style="font-size:11px;color:var(--muted)">%</span>
+          <span class="exp-val" id="ev-i">—</span>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <input type="range" id="sl-i" min="0" max="30" step="1" value="5" oninput="fromSlider('i',this.value)">
+        <span class="drag-hint">← тяните</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bf-a" id="bf-i" style="width:0"></div></div>
+    </div>
+
+    <div class="exp-total">
+      <span class="et-lbl">Итого расходы</span>
+      <div class="et-right">
+        <span class="et-pct" id="et-p">—</span>
+        <span class="et-val" id="et-v">—</span>
+      </div>
+    </div>
+    <div class="bar-track" style="height:6px;margin-top:7px;">
+      <div class="bar-fill bf-w" id="bf-tot" style="width:0"></div>
+    </div>
+    <div class="base-box">
+      <span class="base-lbl">База налогообложения (Д – Р)</span>
+      <span class="base-val" id="bb-v">—</span>
+    </div>
+  </div>
+
+  <!-- Строка 1, правая: РАСЧЁТ НАЛОГОВ -->
+  <div class="card">
+    <div class="c-title" style="color:var(--muted)">Расчёт налогов</div>
+
+    <div class="ts ts-u" id="ts-u">
+      <div class="ts-head">
+        <span class="ts-name u">УСН «Доходы – Расходы» · Калмыкия<span class="pill">5%</span></span>
+        <span class="ts-ttl u" id="ttt-u">—</span>
+      </div>
+      <div class="tl"><span class="tl-l">База (Д – Р)</span><span class="tl-v" id="tl-ub">—</span></div>
+      <div class="tl"><span class="tl-l">Ставка Калмыкия</span><span class="tl-v" style="color:var(--blue)">× 5%</span></div>
+      <div class="tl" style="border-top:1px solid rgba(79,142,247,0.2);margin-top:3px;padding-top:6px;">
+        <span class="tl-l" style="color:var(--blue);font-weight:500">Итого налог УСН</span>
+        <span class="tl-v" style="color:var(--blue);font-size:13px" id="tl-ut">—</span>
+      </div>
+    </div>
+
+    <div class="ts ts-o" id="ts-o">
+      <div class="ts-head">
+        <span class="ts-name o">ОСНО<span class="pill">НДС 22%</span><span class="pill">Прибыль 25%</span></span>
+        <span class="ts-ttl o" id="ttt-o">—</span>
+      </div>
+      <div class="tl"><span class="tl-l tl-sec">— НДС —</span></div>
+      <div class="tl"><span class="tl-l">Исходящий НДС<span class="pill">22/122</span></span><span class="tl-v" id="tl-vo">—</span></div>
+      <div class="tl"><span class="tl-l">Входящий НДС (матер. расх.)<span class="pill">22/122</span></span><span class="tl-v" id="tl-vi">—</span></div>
+      <div class="tl"><span class="tl-l" style="color:var(--orange)">НДС к уплате</span><span class="tl-v" style="color:var(--orange)" id="tl-vn">—</span></div>
+      <div class="tl"><span class="tl-l tl-sec">— Налог на прибыль —</span></div>
+      <div class="tl"><span class="tl-l">База (выр. − расх. без НДС)</span><span class="tl-v" id="tl-ob">—</span></div>
+      <div class="tl"><span class="tl-l">Ставка<span class="pill">25%</span></span><span class="tl-v" style="color:var(--orange)" id="tl-pt">—</span></div>
+      <div class="tl" style="border-top:1px solid rgba(249,115,22,0.2);margin-top:3px;padding-top:6px;">
+        <span class="tl-l" style="color:var(--orange);font-weight:500">Итого налог ОСНО</span>
+        <span class="tl-v" style="color:var(--orange);font-size:13px" id="tl-ot">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Строка 2, левая: СТЕКИРОВАННЫЕ БАРЫ -->
+  <div class="card">
+    <div class="c-title" style="color:var(--muted)">Куда уходит каждый рубль из 60,9 млн</div>
+
+    <div class="sl" style="margin-bottom:5px;">
+      <span class="sl-name">При <span style="color:var(--blue)">УСН</span></span>
+      <span class="sl-info" id="si-u">—</span>
+    </div>
+    <div class="sbar" id="sb-u">
+      <div class="seg s-ex" id="se-eu" style="width:83%">—</div>
+      <div class="seg s-tu" id="se-tu" style="width:1%"></div>
+      <div class="seg s-pu" id="se-pu" style="width:16%">—</div>
+    </div>
+
+    <div class="sl" style="margin-top:12px;margin-bottom:5px;">
+      <span class="sl-name">При <span style="color:var(--orange)">ОСНО</span></span>
+      <span class="sl-info" id="si-o">—</span>
+    </div>
+    <div class="sbar" id="sb-o">
+      <div class="seg s-ex" id="se-eo" style="width:83%">—</div>
+      <div class="seg s-to" id="se-to" style="width:9%">—</div>
+      <div class="seg s-po" id="se-po" style="width:8%">—</div>
+    </div>
+
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:rgba(255,255,255,0.09)"></div>Расходы</div>
+      <div class="li"><div class="ld" style="background:rgba(79,142,247,0.3)"></div>Налог УСН</div>
+      <div class="li"><div class="ld" style="background:rgba(79,142,247,0.6)"></div>ЧП УСН</div>
+      <div class="li"><div class="ld" style="background:rgba(249,115,22,0.35)"></div>Налог ОСНО</div>
+      <div class="li"><div class="ld" style="background:rgba(249,115,22,0.55)"></div>ЧП ОСНО</div>
+    </div>
+  </div>
+
+  <!-- Строка 2, правая: ПРИБЫЛЬ + ИТОГ -->
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div class="pp">
+      <div class="pc pc-u" id="pc-u">
+        <div class="pc-lbl">Чистая прибыль · УСН</div>
+        <div class="pc-val" id="pv-u">—</div>
+        <div class="pc-sub">млн руб./мес</div>
+        <div class="pc-form" id="pf-u">—</div>
+      </div>
+      <div class="pc pc-o" id="pc-o">
+        <div class="pc-lbl">Чистая прибыль · ОСНО</div>
+        <div class="pc-val" id="pv-o">—</div>
+        <div class="pc-sub">млн руб./мес</div>
+        <div class="pc-form" id="pf-o">—</div>
+      </div>
+    </div>
+
+    <div class="delta">
+      <div class="d-left">
+        <div class="d-ey">Переход с УСН → ОСНО</div>
+        <div class="d-hl" id="d-hl">—</div>
+        <div class="d-desc" id="d-desc">—</div>
+      </div>
+      <div class="d-stats">
+        <div class="d-stat">
+          <div class="d-slbl">Потери/мес</div>
+          <div class="d-sval" id="dv-m">—</div>
+          <div class="d-ssub">млн руб.</div>
+        </div>
+        <div class="d-stat">
+          <div class="d-slbl">Изменение</div>
+          <div class="d-sval" id="dv-p">—</div>
+          <div class="d-ssub">к прибыли</div>
+        </div>
+        <div class="d-stat">
+          <div class="d-slbl">Потери/год</div>
+          <div class="d-sval" id="dv-y">—</div>
+          <div class="d-ssub">млн руб.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-grid -->
+
+<!-- FOOTNOTE -->
+<div class="footnote fade-up d6">
+  <div class="fn"><span>УСН «Д–Р» 5%</span> — региональная льготная ставка Республики Калмыкия. Федеральная стандартная ставка — 15%.</div>
+  <div class="fn"><span>НДС 22% (ставка с 01.01.2026), расчётная 22/122.</span> Налог на прибыль 25% (с 2025 г.). Входящий НДС — только с материальных расходов.</div>
+  <div class="fn"><span>Слайдеры интерактивны</span> — измените любую статью расходов, все карточки пересчитаются мгновенно.</div>
+</div>
+
+</div>
+<script>
+const REV = 60.9;
+const USN_R = 0.05, VAT_R = 22/122, PROF_R = 0.25;
+const MAX = {d:95,c:50,i:30};
+let S = {d:65,c:13,i:5,filter:'both'};
+
+const f2 = v => v.toFixed(2).replace('.',',');
+const f1 = v => v.toFixed(1).replace('.',',');
+const fm = v => f2(v)+' млн';
+const $ = id => document.getElementById(id);
+
+function compute(){
+  const totPct = (S.d+S.c+S.i)/100;
+  const matPct = (S.d+S.c)/100;
+  const indPct = S.i/100;
+  const totExp = totPct*REV;
+  const matExp = matPct*REV;
+  const indExp = indPct*REV;
+  const baseUSN = Math.max(0, REV-totExp);
+  const marg    = (baseUSN/REV)*100;
+  const uTax    = USN_R*baseUSN;
+  const uPrf    = baseUSN-uTax;
+  const vOut    = REV*VAT_R;
+  const vIn     = matExp*VAT_R;
+  const vNet    = Math.max(0,vOut-vIn);
+  const revExVAT = REV/1.22;
+  const matExVAT = matExp/1.22;
+  const baseIT   = Math.max(0, revExVAT-matExVAT-indExp);
+  const pTax     = PROF_R*baseIT;
+  const oTax     = vNet+pTax;
+  const oPrf     = REV-totExp-vNet-pTax;
+  const delta    = oPrf-uPrf;
+  const deltaPct = uPrf>0 ? (delta/uPrf)*100 : 0;
+  return {totPct,matPct,indPct,totExp,matExp,indExp,
+          baseUSN,marg,uTax,uPrf,
+          vOut,vIn,vNet,revExVAT,matExVAT,baseIT,pTax,
+          oTax,oPrf,delta,deltaPct,totPctNum:S.d+S.c+S.i};
+}
+
+function seg(id,w,txt){const el=$(id);el.style.width=w+'%';el.textContent=w>5?txt:'';}
+
+function render(){
+  const c=compute();
+  $('bf-d').style.width=(S.d/MAX.d*100)+'%';
+  $('bf-c').style.width=(S.c/MAX.c*100)+'%';
+  $('bf-i').style.width=(S.i/MAX.i*100)+'%';
+  $('bf-tot').style.width=Math.min(c.totPctNum,100)+'%';
+  $('ev-d').textContent=fm(S.d/100*REV);
+  $('ev-c').textContent=fm(S.c/100*REV);
+  $('ev-i').textContent=fm(S.i/100*REV);
+  $('et-p').textContent=c.totPctNum+'%';
+  $('et-v').textContent=fm(c.totExp);
+  $('bb-v').textContent=fm(c.baseUSN);
+  $('kv-exp').innerHTML=f2(c.totExp)+' <span style="font-size:11px;color:var(--muted)">млн</span>';
+  $('ks-exp').textContent=c.totPctNum+'% от доходов';
+  $('kv-base').innerHTML=f2(c.baseUSN)+' <span style="font-size:11px;color:var(--muted)">млн</span>';
+  $('ks-base').textContent=f1(c.marg)+'% от доходов';
+  $('kv-marg').innerHTML=f1(c.marg)+' <span style="font-size:11px;color:var(--muted)">%</span>';
+  $('sv-ut').textContent=fm(c.uTax);$('ss-ut').textContent='5% × '+f2(c.baseUSN);
+  $('sv-up').textContent=fm(c.uPrf);$('ss-up').textContent=f1(c.uPrf/REV*100)+'% от выручки';
+  $('sv-ot').textContent=fm(c.oTax);$('ss-ot').textContent='НДС '+f2(c.vNet)+' + Приб. '+f2(c.pTax);
+  $('sv-op').textContent=fm(c.oPrf);$('ss-op').textContent=f1(c.oPrf/REV*100)+'% от выручки';
+  $('ttt-u').textContent=fm(c.uTax);$('tl-ub').textContent=fm(c.baseUSN);$('tl-ut').textContent=fm(c.uTax);
+  $('ttt-o').textContent=fm(c.oTax);
+  $('tl-vo').textContent=f2(REV)+' × 22/122 = '+fm(c.vOut);
+  $('tl-vi').textContent='− '+f2(c.matExp)+' × 22/122 = − '+fm(c.vIn);
+  $('tl-vn').textContent=fm(c.vNet);
+  $('tl-ob').textContent=f2(c.revExVAT)+' − '+f2(c.matExVAT)+' − '+f2(c.indExp)+' = '+fm(c.baseIT);
+  $('tl-pt').textContent=f2(c.baseIT)+' × 25% = '+fm(c.pTax);
+  $('tl-ot').textContent=fm(c.oTax);
+  $('pv-u').textContent=f2(c.uPrf);$('pv-o').textContent=f2(c.oPrf);
+  $('pf-u').textContent='60,9 − '+f2(c.totExp)+' − '+f2(c.uTax);
+  $('pf-o').textContent='60,9 − '+f2(c.totExp)+' − '+f2(c.oTax);
+  const eW=Math.min(c.totPct*100,96),tuW=Math.min(c.uTax/REV*100,15),puW=Math.max(100-eW-tuW,0);
+  const toW=Math.min(c.oTax/REV*100,28),poW=Math.max(100-eW-toW,0);
+  seg('se-eu',eW,f2(c.totExp));seg('se-tu',tuW,f2(c.uTax));seg('se-pu',puW,f2(c.uPrf));
+  seg('se-eo',eW,f2(c.totExp));seg('se-to',toW,f2(c.oTax));seg('se-po',poW,f2(c.oPrf));
+  $('si-u').textContent='Расх '+f2(c.totExp)+' · Налог '+f2(c.uTax)+' · ЧП '+f2(c.uPrf);
+  $('si-o').textContent='Расх '+f2(c.totExp)+' · Налог '+f2(c.oTax)+' · ЧП '+f2(c.oPrf);
+  const abs=Math.abs(c.delta);
+  $('dv-m').textContent=(c.delta<0?'−':'+')+f2(abs);
+  $('dv-p').textContent=(c.deltaPct<0?'−':'+')+f1(Math.abs(c.deltaPct))+'%';
+  $('dv-y').textContent=(c.delta<0?'−':'+')+f2(abs*12);
+  if(c.oPrf<0){$('d-hl').textContent='При ОСНО бизнес уходит в убыток';$('d-desc').innerHTML='Налоговая нагрузка превышает прибыль. Экономия УСН: <strong>'+f2(abs)+' млн</strong> руб./мес';}
+  else if(Math.abs(c.deltaPct)>=40){$('d-hl').textContent='Прибыль сокращается почти вдвое';$('d-desc').innerHTML='Калмыцкая льгота 5% против НДС+прибыль 25% — экономия <strong>'+f2(abs)+' млн</strong> руб./мес';}
+  else if(Math.abs(c.deltaPct)>=15){$('d-hl').textContent='Существенная разница в налоговой нагрузке';$('d-desc').innerHTML='УСН выгоднее на <strong>'+f2(abs)+' млн</strong> руб./мес ('+f1(Math.abs(c.deltaPct))+'%)';}
+  else{$('d-hl').textContent='Режимы сопоставимы по нагрузке';$('d-desc').innerHTML='Разница: <strong>'+f2(abs)+' млн</strong> руб./мес ('+f1(Math.abs(c.deltaPct))+'%)';}
+  applyFilter();
+}
+
+function applyFilter(){
+  const f=S.filter;
+  ['sc-ut','sc-up','ts-u','pc-u','sb-u'].forEach(id=>$(id)&&$(id).classList.toggle('dim',f==='osno'));
+  ['sc-ot','sc-op','ts-o','pc-o','sb-o'].forEach(id=>$(id)&&$(id).classList.toggle('dim',f==='usn'));
+}
+
+function setFilter(mode){
+  S.filter=mode;
+  $('btn-u').className='filter-btn'+(mode==='usn'?' fu':'');
+  $('btn-o').className='filter-btn'+(mode==='osno'?' fo':'');
+  $('btn-b').className='filter-btn'+(mode==='both'?' fb':'');
+  applyFilter();
+}
+
+function fromSlider(k,v){
+  S[k]=Math.max(0,Math.min(parseInt(v)||0,MAX[k]));
+  $('ni-'+k).value=S[k];
+  const row=$('sl-'+k).closest('.exp-row');if(row)row.classList.add('touched');
+  render();
+}
+function fromNum(k,v){
+  S[k]=Math.max(0,Math.min(parseInt(v)||0,MAX[k]));
+  $('sl-'+k).value=S[k];
+  const row=$('ni-'+k).closest('.exp-row');if(row)row.classList.add('touched');
+  render();
+}
+
+render();
+
+// ── Кнопка скачивания HTML ─────────────────────────────────────
+document.getElementById('dl-btn').addEventListener('click',function(e){
+  e.preventDefault();
+  const blob = new Blob(['<!DOCTYPE html>\n'+document.documentElement.outerHTML],
+    {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'налоговый-дашборд.html';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+});
+
+// ── Кнопка скачивания PDF ──────────────────────────────────────
+function downloadPDF(){
+  const title = document.title;
+  document.title = 'Налоговый анализ — УСН vs ОСНО';
+  window.print();
+  document.title = title;
+}
+</script>
+</body>
+</html>
